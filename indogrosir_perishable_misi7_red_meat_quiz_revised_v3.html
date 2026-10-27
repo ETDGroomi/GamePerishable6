@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Perishable Mission 7 — Red Meat</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            comic: ['Trebuchet MS', 'Arial Rounded MT Bold', 'Arial', 'sans-serif']
+          },
+          keyframes: {
+            floaty: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-8px)' }
+            },
+            pop: {
+              '0%': { transform: 'scale(.8)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' }
+            },
+            shake: {
+              '0%,100%': { transform: 'translateX(0)' },
+              '20%': { transform: 'translateX(-7px)' },
+              '40%': { transform: 'translateX(7px)' },
+              '60%': { transform: 'translateX(-5px)' },
+              '80%': { transform: 'translateX(5px)' }
+            },
+            burst: {
+              '0%': { transform: 'scale(.3) rotate(0deg)', opacity: '0' },
+              '65%': { transform: 'scale(1.15) rotate(10deg)', opacity: '1' },
+              '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' }
+            }
+          },
+          animation: {
+            floaty: 'floaty 2.8s ease-in-out infinite',
+            pop: 'pop .24s ease-out',
+            shake: 'shake .4s ease-in-out',
+            burst: 'burst .45s ease-out'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root{
+      --sky:#dff5ff;
+      --blue:#0b72ce;
+      --blueDark:#084c8c;
+      --red:#e42a36;
+      --yellow:#ffd83d;
+      --ink:#15324b;
+      --green:#22b573;
+      --paper:#ffffff;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at 15px 15px, rgba(8,76,140,.06) 2px, transparent 2.5px) 0 0 / 30px 30px,
+        linear-gradient(180deg, #effaff 0%, var(--sky) 100%);
+      color:var(--ink);
+      font-family:'Trebuchet MS', 'Arial Rounded MT Bold', Arial, sans-serif;
+      min-height:100vh;
+    }
+    .comic-border{
+      border:4px solid var(--ink);
+      border-radius:24px;
+      box-shadow:8px 8px 0 rgba(21,50,75,.18);
+    }
+    .comic-btn{
+      border:4px solid var(--ink);
+      box-shadow:6px 6px 0 var(--ink);
+      border-radius:18px;
+      font-weight:900;
+      transition:.12s ease;
+      touch-action:manipulation;
+    }
+    .comic-btn:active{
+      transform:translate(4px,4px);
+      box-shadow:2px 2px 0 var(--ink);
+    }
+    .comic-chip{
+      border:3px solid var(--ink);
+      border-radius:999px;
+      box-shadow:4px 4px 0 rgba(21,50,75,.16);
+    }
+    .dashed-zone{
+      border:4px dashed var(--blueDark);
+      border-radius:20px;
+    }
+    .choice{
+      border:4px solid var(--ink);
+      border-radius:18px;
+      background:#fff;
+      box-shadow:5px 5px 0 rgba(21,50,75,.16);
+      transition:.15s ease;
+    }
+    .choice:not(:disabled):active{ transform:translateY(2px); }
+    .choice.correct{ background:#d9ffe8; border-color:#087a47; }
+    .choice.wrong{ background:#ffe0e3; border-color:#a11822; }
+    .choice.selected{ outline:4px solid #ffb000; outline-offset:2px; }
+    .choice:disabled{ cursor:default; opacity:1; }
+    .timer-track{ height:14px; background:#cceaff; border:3px solid var(--ink); border-radius:999px; overflow:hidden; }
+    .timer-fill{ height:100%; background:linear-gradient(90deg,#27b56d,#f3c623,#e52d3e); transition:width 1s linear; }
+    .feedback{
+      border:4px solid var(--ink);
+      border-radius:20px;
+      box-shadow:6px 6px 0 rgba(21,50,75,.14);
+    }
+    .modal-backdrop{
+      position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+      background:rgba(6,31,52,.62); padding:18px;
+    }
+    .hidden-force{ display:none !important; }
+    .heart{ filter: drop-shadow(0 3px 0 rgba(21,50,75,.18)); }
+    .confetti-piece{
+      position:fixed; top:-20px; width:10px; height:18px; z-index:60; pointer-events:none;
+      animation:fall 2.6s linear forwards;
+    }
+    @keyframes fall{
+      0%{ transform:translateY(-20px) rotate(0); opacity:1; }
+      100%{ transform:translateY(115vh) rotate(720deg); opacity:0; }
+    }
+    .drag-item{
+      border:4px solid var(--ink); border-radius:16px; background:#fff; box-shadow:4px 4px 0 rgba(21,50,75,.16);
+      cursor:grab; user-select:none;
+    }
+    .drag-item.dragging{ opacity:.55; transform:rotate(-2deg); }
+    .drop-target{
+      min-height:56px; border:4px dashed #6ba6d8; border-radius:16px; background:#f7fcff;
+      transition:.15s ease;
+    }
+    .drop-target.over{ background:#e8f5ff; border-color:var(--blue); transform:scale(1.02); }
+    .drop-content .drag-item{ cursor:grab; }
+    .order-item{
+      border:4px solid var(--ink); border-radius:16px; background:#fff; box-shadow:4px 4px 0 rgba(21,50,75,.15);
+      cursor:grab; user-select:none;
+    }
+    .dot-card{
+      position:relative; min-height:250px; background:#f9fdff; border:4px solid var(--ink); border-radius:20px;
+      overflow:hidden;
+    }
+    .dot{ position:absolute; width:28px; height:28px; border-radius:50%; border:4px solid var(--ink); background:#fff; z-index:2; }
+    .dot.active{ background:var(--yellow); transform:scale(1.12); }
+    .dot-label{ position:absolute; transform:translate(-50%,-125%); font-weight:900; font-size:12px; white-space:nowrap; }
+
+    .connect-board{
+      position:relative;
+      border:4px solid var(--ink);
+      border-radius:22px;
+      background:#f9fdff;
+      overflow:hidden;
+      padding:14px;
+    }
+    .connect-grid{
+      position:relative;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      column-gap:48px;
+      row-gap:14px;
+      align-items:center;
+    }
+    .connect-col{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      position:relative;
+      z-index:2;
+    }
+    .connect-card{
+      min-height:62px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:10px 12px;
+      font-weight:900;
+      line-height:1.25;
+      background:#fff;
+      border:4px solid var(--ink);
+      border-radius:18px;
+      box-shadow:5px 5px 0 rgba(21,50,75,.14);
+      transition:.15s ease;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .connect-card.left-selected{
+      background:#fff3a6;
+      transform:translateX(2px);
+      outline:4px solid #ffb000;
+      outline-offset:1px;
+    }
+    .connect-card.matched{
+      background:#d9ffe8;
+      border-color:#087a47;
+      box-shadow:5px 5px 0 rgba(8,122,71,.16);
+    }
+    .connect-card.disabled{
+      pointer-events:none;
+    }
+    .connect-lines{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:1;
+      pointer-events:none;
+      overflow:visible;
+    }
+    .connect-line{
+      fill:none;
+      stroke:#18a35b;
+      stroke-width:5;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      filter:drop-shadow(1px 2px 0 rgba(21,50,75,.12));
+    }
+    .connect-line.pending{
+      stroke:#0b72ce;
+      stroke-dasharray:8 7;
+      opacity:.85;
+    }
+    .connect-dot-end{
+      fill:#18a35b;
+      stroke:var(--ink);
+      stroke-width:3;
+    }
+    .connect-center{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      z-index:3;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:38px;
+      height:38px;
+      border:3px solid var(--ink);
+      border-radius:50%;
+      background:#ffd83d;
+      font-weight:900;
+      box-shadow:4px 4px 0 rgba(21,50,75,.16);
+    }
+    @media (max-width:430px){
+      .connect-grid{ column-gap:28px; }
+      .connect-card{ min-height:58px; font-size:13px; }
+      .connect-center{ width:32px; height:32px; font-size:12px; }
+    }
+    .icon-box{
+      border:4px solid var(--ink); border-radius:18px; background:#fff; box-shadow:5px 5px 0 rgba(21,50,75,.15);
+      transition:.15s ease;
+    }
+    .icon-box.selected{ background:#fff5ad; transform:translateY(-3px); }
+    .small-note{ font-size:12px; opacity:.76; }
+    @media (min-width:768px){
+      #app{ max-width:760px; margin:0 auto; }
+    }
+  </style>
+</head>
+
+<body>
+<div id="app" class="min-h-screen px-4 py-4 pb-10">
+
+  <!-- HEADER -->
+  <header class="flex items-center justify-between gap-3 mb-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-white comic-border px-3 py-2 font-black text-blue-700 text-sm tracking-wide">INDOGROSIR</div>
+      <div class="font-black text-red-600 text-sm">PERISHABLE</div>
+    </div>
+    <button id="audioToggle" class="comic-chip bg-white px-3 py-2 text-sm font-black" type="button">🔊 BGM ON</button>
+  </header>
+
+  <!-- START SCREEN -->
+  <section id="startScreen" class="space-y-4">
+    <div class="comic-border bg-white p-5 text-center overflow-hidden relative">
+      <div class="absolute -top-7 -left-7 text-6xl rotate-12">🥩</div>
+      <div class="absolute -top-4 -right-4 text-6xl -rotate-12">⭐</div>
+
+      <div class="inline-flex comic-chip bg-yellow-300 px-4 py-2 text-xs font-black uppercase tracking-widest">MISSION 7 • RED MEAT</div>
+      <h1 class="mt-4 text-4xl sm:text-5xl font-black text-blue-700 leading-none">KENALI<br><span class="text-red-600">RED MEAT!</span></h1>
+      <p class="mt-4 font-bold text-slate-600">Siap jadi <span class="text-blue-700">BUTCHER MASTER</span>? 😎</p>
+
+      <div class="mt-5 grid grid-cols-3 gap-2 text-sm">
+        <div class="comic-chip bg-sky-100 p-3 font-black">🧠<br>C1–C3</div>
+        <div class="comic-chip bg-yellow-100 p-3 font-black">⏱️<br>30 DETIK</div>
+        <div class="comic-chip bg-red-100 p-3 font-black">❤️ x5<br>NYAWA</div>
+      </div>
+
+      <div class="mt-5 bg-blue-50 comic-border p-4 text-left">
+        <p class="font-black text-blue-700">MISI KITA:</p>
+        <p class="mt-1 text-sm leading-relaxed">Kenali jenis potongan Red Meat, cirinya, pengelompokannya, dan kegunaan terbaiknya sebagai bahan masakan.</p>
+      </div>
+
+      <div class="mt-5">
+        <label for="playerName" class="block text-left text-sm font-black mb-2">NAMA LENGKAP</label>
+        <input id="playerName" type="text" autocomplete="name" maxlength="60"
+          placeholder="Tulis nama lengkap di sini..."
+          class="w-full rounded-2xl border-4 border-slate-800 px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-sky-200 bg-white" />
+      </div>
+
+      <button id="startBtn" disabled type="button"
+        class="comic-btn mt-5 w-full bg-slate-300 text-slate-500 px-5 py-4 text-lg">
+        🚀 MULAI MISI
+      </button>
+      <p class="small-note mt-3">Nama wajib diisi untuk memulai.</p>
+    </div>
+
+    <div class="comic-border bg-white p-4">
+      <p class="font-black text-red-600">💡 ATURAN CEPAT</p>
+      <p class="text-sm mt-1 leading-relaxed">Jawaban dapat diubah sebelum menekan tombol pengecekan. Setelah dikunci, baca pembahasan, lalu tekan <b>SOAL SELANJUTNYA</b> untuk lanjut.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ SCREEN -->
+  <section id="quizScreen" class="hidden-force space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <div class="comic-chip bg-white px-3 py-2 text-xs sm:text-sm font-black">
+        <span id="progressText">SOAL 1 / 15</span>
+      </div>
+      <button id="giveUpBtn" type="button" class="comic-chip bg-red-100 text-red-700 px-3 py-2 text-xs font-black">🏳️ MENYERAH</button>
+    </div>
+
+    <div class="comic-border bg-white p-3">
+      <div class="flex items-center justify-between gap-3 text-sm font-black">
+        <span>⏱️ WAKTU</span>
+        <span id="timerText" class="text-red-600">30</span>
+      </div>
+      <div class="timer-track mt-2"><div id="timerFill" class="timer-fill" style="width:100%"></div></div>
+    </div>
+
+    <div class="flex items-center justify-center gap-1 py-1" id="hearts"></div>
+
+    <div id="questionCard" class="comic-border bg-white p-4"></div>
+    <div id="feedbackArea"></div>
+    <div class="h-2"></div>
+    <button id="nextBtn" disabled type="button"
+      class="comic-btn w-full bg-slate-300 text-slate-500 px-5 py-4 text-lg">
+      SOAL SELANJUTNYA ➜
+    </button>
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section id="resultScreen" class="hidden-force">
+    <div class="comic-border bg-white p-6 text-center relative overflow-hidden">
+      <div id="resultEmoji" class="text-7xl animate-burst">🏆</div>
+      <div id="resultBadge" class="inline-flex comic-chip bg-yellow-300 px-4 py-2 text-xs font-black uppercase mt-3">MISSION COMPLETE</div>
+      <h2 id="resultTitle" class="mt-4 text-4xl font-black text-blue-700">HEBAT!</h2>
+      <p id="resultSubtitle" class="mt-2 text-slate-600 font-bold"></p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        <div class="comic-chip bg-sky-100 p-4">
+          <div class="text-xs font-black">SKOR</div>
+          <div id="scoreText" class="text-3xl font-black text-blue-700">0 / 15</div>
+        </div>
+        <div class="comic-chip bg-red-100 p-4">
+          <div class="text-xs font-black">PERSENTASE</div>
+          <div id="percentText" class="text-3xl font-black text-red-600">0%</div>
+        </div>
+      </div>
+
+      <div class="mt-5 comic-border bg-yellow-50 p-4 text-left">
+        <p class="font-black">👤 PESERTA</p>
+        <p id="resultName" class="font-black text-blue-700 mt-1">-</p>
+        <p class="text-sm mt-3">Batas kelulusan: <b>70%</b>.</p>
+      </div>
+
+      <button id="restartBtn" type="button" class="comic-btn mt-5 w-full bg-blue-600 text-white px-5 py-4 text-lg">
+        🔁 ULANGI KUIS
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirmModal" class="modal-backdrop hidden-force">
+  <div class="comic-border bg-white w-full max-w-md p-5 text-center animate-pop">
+    <div class="text-5xl">🤔</div>
+    <h3 class="text-2xl font-black text-red-600 mt-3">Yakin menyerah?</h3>
+    <p class="mt-2 text-slate-600 font-bold">Apakah anda yakin untuk mengulang kuis?</p>
+    <div class="grid grid-cols-2 gap-3 mt-5">
+      <button id="cancelGiveUp" type="button" class="comic-btn bg-slate-200 px-4 py-3 font-black">BATAL</button>
+      <button id="confirmGiveUp" type="button" class="comic-btn bg-red-600 text-white px-4 py-3 font-black">YA, ULANG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ====== QUIZ DATA (derived from uploaded PDF) ======
+  const questions = [
+    {
+      id: 1, level: 'C1', type: 'mc',
+      prompt: 'Butcher di Indogrosir bertugas mengolah kiriman supplier untuk dipajang dengan layak. Istilah “Butcher” berarti…',
+      options: ['Tukang Potong / Tukang Jagal', 'Kasir Daging', 'Penyortir Buah', 'Petugas Receiving'],
+      answer: 0,
+      explanation: 'Butcher berarti Tukang Potong / Tukang Jagal dan bertugas mengolah segala jenis daging kiriman supplier agar layak dipajang di toko.'
+    },
+    {
+      id: 2, level: 'C1', type: 'tf',
+      prompt: 'Has Dalam (Tenderloin) dikenal sebagai daging yang paling mahal dan paling empuk.',
+      answer: true,
+      explanation: 'Benar. Modul menyebut Has Dalam/Tenderloin sebagai daging paling mahal dan paling empuk serta umum digunakan untuk steak premium.'
+    },
+    {
+      id: 3, level: 'C1', type: 'symbol',
+      prompt: 'Mana simbol yang paling tepat untuk menggambarkan <b>Premium Cuts</b> menurut modul?',
+      options: [
+        {icon:'👑', label:'Premium', value:'premium'},
+        {icon:'🪨', label:'Paling keras', value:'hard'},
+        {icon:'💸', label:'Paling murah', value:'cheap'},
+        {icon:'🥕', label:'Sayuran', value:'veg'}
+      ],
+      answer: 'premium',
+      explanation: 'Premium Cuts adalah Golongan 1 dan menjadi kategori potongan dengan nilai tertinggi dalam klasifikasi pada modul.'
+    },
+    {
+      id: 4, level: 'C1', type: 'mc',
+      prompt: 'Lamusir (Rib Eye/Cube Roll) berasal dari bagian…',
+      options: ['Iga bagian atas (sekitar tulang rusuk ke-6 sampai ke-12)', 'Leher bawah', 'Kaki bagian bawah', 'Perut bawah saja'],
+      answer: 0,
+      explanation: 'Lamusir atau Rib Eye/Cube Roll berasal dari iga bagian atas, sekitar tulang rusuk ke-6 sampai ke-12.'
+    },
+    {
+      id: 5, level: 'C2', type: 'drag',
+      prompt: 'Kelompokkan potongan berikut ke golongan yang tepat. Seret kartu ke kotak yang sesuai.',
+      groups: [
+        {id:'g1', label:'GOL 1 • PREMIUM', items:['Has Dalam','Lamusir','Has Luar']},
+        {id:'g2', label:'GOL 2 • SECONDARY', items:['Top Side','Rump','Tanjung']},
+        {id:'g3', label:'GOL 3 • ECONOMY', items:['Sengkel','Samcan','Brisket']}
+      ],
+      dragItems: [
+        {id:'d1', text:'Has Dalam', correct:'g1'},
+        {id:'d2', text:'Top Side', correct:'g2'},
+        {id:'d3', text:'Sengkel', correct:'g3'},
+        {id:'d4', text:'Lamusir', correct:'g1'},
+        {id:'d5', text:'Rump', correct:'g2'},
+        {id:'d6', text:'Brisket', correct:'g3'}
+      ],
+      explanation: 'Gol 1 = Premium Cuts (Has Dalam, Lamusir, Has Luar). Gol 2 = Secondary Cuts (contoh: Tanjung, Kelapa, Rump, Round, Top Side, Silver Side). Gol 3 = Economy Cuts (contoh: Sengkel, Samcan, Sandung Lamur, Iga, Shank, Flank, Brisket, Rib).'
+    },
+    {
+      id: 6, level: 'C2', type: 'mc',
+      prompt: 'Mengapa Has Dalam tidak cocok dimasak terlalu lama?',
+      options: [
+        'Karena minim lemak',
+        'Karena terlalu banyak tulang',
+        'Karena selalu berasal dari kaki sapi',
+        'Karena harus dibekukan ulang'
+      ],
+      answer: 0,
+      explanation: 'Has Dalam memiliki lemak yang sangat sedikit, sehingga modul menyatakan tidak cocok dimasak terlalu lama.'
+    },
+    {
+      id: 7, level: 'C2', type: 'connect',
+      prompt: 'Connecting Dot: hubungkan nama potongan dengan ciri fisik yang paling tepat.',
+      pairs: [
+        {left:'Has Dalam', right:'Serat sangat halus • lemak sangat sedikit • silindris'},
+        {left:'Lamusir', right:'Bentuk oval/bulat • ada lemak mata • juicy'},
+        {left:'Has Luar', right:'Memanjang agak pipih • lemak di satu sisi • lebih padat'}
+      ],
+      explanation: 'Ciri fisik utama: Has Dalam berbentuk panjang/silindris dengan serat sangat halus; Lamusir oval/bulat dengan lemak mata dan tekstur juicy; Has Luar memanjang agak pipih dengan lemak di satu sisi dan lebih padat.'
+    },
+    {
+      id: 8, level: 'C2', type: 'order',
+      prompt: 'Urutkan dari nilai potongan tertinggi ke terendah.',
+      items: ['Economy Cuts', 'Premium Cuts', 'Secondary Cuts'],
+      answer: ['Premium Cuts','Secondary Cuts','Economy Cuts'],
+      explanation: 'Urutan klasifikasi modul adalah Gol 1 Premium Cuts → Gol 2 Secondary Cuts → Gol 3 Economy Cuts.'
+    },
+    {
+      id: 9, level: 'C2', type: 'tf',
+      prompt: 'Lamusir atau Rib Eye memiliki bentuk oval atau bulat dan mempunyai lemak mata di satu sisi.',
+      answer: true,
+      explanation: 'Benar. Modul menyebut Lamusir/Rib Eye memiliki bentuk oval atau bulat, serat halus, warna merah cerah, lemak mata di satu sisi, serta tekstur empuk dan juicy.'
+    },
+    {
+      id: 10, level: 'C3', type: 'mc',
+      prompt: 'Seorang konsumen ingin membuat <b>Rendang</b>. Potongan yang paling sesuai berdasarkan contoh dialog di modul adalah…',
+      options: ['Pendasar / Silver Side', 'Has Dalam', 'Lamusir', 'Has Luar'],
+      answer: 0,
+      explanation: 'Contoh dialog pada modul: untuk RENDANG, konsumen diarahkan menggunakan daging sapi bagian PENDASAR / SILVER SIDE.'
+    },
+    {
+      id: 11, level: 'C3', type: 'drag',
+      prompt: 'Simulasikan konsultasi konsumen. Kelompokkan menu ke potongan/golongan yang paling tepat berdasarkan modul.',
+      groups: [
+        {id:'menu1', label:'STEAK • BARBECUE • ROAST BEEF', items:['Premium Cuts']},
+        {id:'menu2', label:'RENDANG • EMPAL • BAKSO • TUMIS', items:['Secondary Cuts']},
+        {id:'menu3', label:'RAWON • SOTO • GULAI • DAGING GILING', items:['Economy Cuts']}
+      ],
+      dragItems: [
+        {id:'m1', text:'Premium Cuts', correct:'menu1'},
+        {id:'m2', text:'Secondary Cuts', correct:'menu2'},
+        {id:'m3', text:'Economy Cuts', correct:'menu3'}
+      ],
+      explanation: 'Peruntukan menu pada modul: Gol 1 Premium Cuts → steak, barbecue, roast beef. Gol 2 Secondary Cuts → rendang, empal, bakso, tumis daging. Gol 3 Economy Cuts → rawon, soto, gulai, daging giling.'
+    },
+    {
+      id: 12, level: 'C3', type: 'mc',
+      prompt: 'Saat melakukan pemajangan, pilihan tindakan yang paling tepat untuk Has Dalam adalah…',
+      options: [
+        'Menjaga agar kualitasnya tidak turun karena nilainya tinggi',
+        'Memotong sangat tipis agar lemak hilang',
+        'Memasaknya lama terlebih dahulu',
+        'Menggabungkannya dengan produk yang sudah tidak layak'
+      ],
+      answer: 0,
+      explanation: 'Modul menekankan butcher harus memperhatikan pemajangan Has Dalam agar tidak terjadi penurunan kualitas mutu yang dapat menurunkan harga jual daging bernilai tinggi.'
+    },
+    {
+      id: 13, level: 'C3', type: 'connect',
+      prompt: 'Connecting Dot: cocokkan jenis potongan dengan penggunaan terbaiknya.',
+      pairs: [
+        {left:'Has Dalam', right:'Steak premium'},
+        {left:'Lamusir', right:'Rib eye steak / grill / shabu-shabu'},
+        {left:'Pendasar / Silver Side', right:'Rendang'}
+      ],
+      explanation: 'Has Dalam banyak digunakan untuk steak premium. Lamusir cocok untuk rib eye steak, grill, shabu-shabu, yakiniku, sukiyaki, dan beef slice premium. Pendasar/Silver Side disebut pada contoh dialog sebagai pilihan untuk rendang.'
+    },
+    {
+      id: 14, level: 'C3', type: 'tf',
+      prompt: 'Butcher wajib bisa memasak berbagai menu dengan daging yang dijual kepada konsumen.',
+      answer: false,
+      explanation: 'Salah. Modul menyatakan butcher tidak wajib bisa masak, tetapi WAJIB tahu daging tersebut bagus untuk dimasak sebagai apa dan mampu mengedukasi konsumen.'
+    },
+    {
+      id: 15, level: 'C3', type: 'mc',
+      prompt: 'Kita menemukan daging dengan tanda-tanda sudah tidak layak konsumsi. Apa tindakan yang benar?',
+      options: [
+        'Tetap diolah agar tidak musnah',
+        'Dicampur dengan daging yang masih baik',
+        'Dilarang diolah dan wajib dimusnahkan',
+        'Dijual cepat dengan harga diskon'
+      ],
+      answer: 2,
+      explanation: 'Modul menegaskan daging yang sudah tidak layak konsumsi DILARANG untuk DIOLAH dan WAJIB DIMUSNAHKAN.'
+    }
+  ];
+
+  const state = {
+    name: '',
+    index: 0,
+    score: 0,
+    lives: 5,
+    answered: false,
+    timer: 30,
+    timerId: null,
+    bgmOn: true,
+    audioCtx: null,
+    master: null,
+    bgmTimer: null,
+    dragPlaced: {},
+    connectPairs: [],
+    order: [],
+    mcAnswer: null
+  };
+
+  // ====== DOM ======
+  const el = (id) => document.getElementById(id);
+  const startScreen = el('startScreen');
+  const quizScreen = el('quizScreen');
+  const resultScreen = el('resultScreen');
+  const playerName = el('playerName');
+  const startBtn = el('startBtn');
+  const questionCard = el('questionCard');
+  const feedbackArea = el('feedbackArea');
+  const nextBtn = el('nextBtn');
+  const progressText = el('progressText');
+  const hearts = el('hearts');
+  const timerText = el('timerText');
+  const timerFill = el('timerFill');
+  const giveUpBtn = el('giveUpBtn');
+  const confirmModal = el('confirmModal');
+  const cancelGiveUp = el('cancelGiveUp');
+  const confirmGiveUp = el('confirmGiveUp');
+  const audioToggle = el('audioToggle');
+
+  // ====== AUDIO WEB API ======
+  function ensureAudio() {
+    if (!state.audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      state.audioCtx = new AudioContext();
+      state.master = state.audioCtx.createGain();
+      state.master.gain.value = 0.08;
+      state.master.connect(state.audioCtx.destination);
+    }
+    if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+    if (state.bgmOn && !state.bgmTimer) startBgm();
+  }
+
+  function tone(freq, duration=0.12, type='square', volume=0.25, when=0) {
+    if (!state.audioCtx || !state.bgmOn && type === 'sine') return;
+    const t = state.audioCtx.currentTime + when;
+    const o = state.audioCtx.createOscillator();
+    const g = state.audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, volume), t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    o.connect(g); g.connect(state.master);
+    o.start(t); o.stop(t + duration + 0.02);
+  }
+  function sfxClick(){ ensureAudio(); tone(520,.06,'square',.35); }
+  function sfxCorrect(){ ensureAudio(); tone(660,.10,'square',.35); tone(880,.14,'square',.35,.08); }
+  function sfxWrong(){ ensureAudio(); tone(180,.16,'sawtooth',.32); tone(130,.22,'sawtooth',.28,.10); }
+  function sfxGameOver(){ ensureAudio(); [260,220,180,140].forEach((f,i)=>tone(f,.18,'square',.3,i*.12)); }
+
+  function startBgm() {
+    if (!state.audioCtx || !state.bgmOn || state.bgmTimer) return;
+    const seq = [523,659,784,659,587,698,880,698];
+    let i=0;
+    state.bgmTimer = setInterval(() => {
+      if (!state.bgmOn) return;
+      tone(seq[i % seq.length], .11, 'triangle', .10);
+      i++;
+    }, 260);
+  }
+  function stopBgm(){
+    clearInterval(state.bgmTimer);
+    state.bgmTimer = null;
+  }
+  audioToggle.addEventListener('click', () => {
+    state.bgmOn = !state.bgmOn;
+    audioToggle.textContent = state.bgmOn ? '🔊 BGM ON' : '🔇 BGM OFF';
+    if (state.bgmOn) { ensureAudio(); startBgm(); } else stopBgm();
+  });
+
+  // ====== UI HELPERS ======
+  function showScreen(screen) {
+    [startScreen, quizScreen, resultScreen].forEach(s => s.classList.add('hidden-force'));
+    screen.classList.remove('hidden-force');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function updateStartButton() {
+    const ok = playerName.value.trim().length > 0;
+    startBtn.disabled = !ok;
+    startBtn.classList.toggle('bg-blue-600', ok);
+    startBtn.classList.toggle('text-white', ok);
+    startBtn.classList.toggle('bg-slate-300', !ok);
+    startBtn.classList.toggle('text-slate-500', !ok);
+  }
+  playerName.addEventListener('input', updateStartButton);
+
+  function renderHearts(){
+    hearts.innerHTML = '';
+    for(let i=0;i<5;i++){
+      const span = document.createElement('span');
+      span.className = 'heart text-3xl ' + (i < state.lives ? '' : 'opacity-20 grayscale');
+      span.textContent = '❤️';
+      hearts.appendChild(span);
+    }
+  }
+
+  function setupTimer(){
+    clearInterval(state.timerId);
+    state.timer = 30;
+    timerText.textContent = '30';
+    timerFill.style.width = '100%';
+    state.timerId = setInterval(() => {
+      if (state.answered) return;
+      state.timer--;
+      timerText.textContent = String(state.timer);
+      timerFill.style.width = `${(state.timer/30)*100}%`;
+      if (state.timer <= 0) {
+        clearInterval(state.timerId);
+        submitAnswer(null, true);
+      }
+    }, 1000);
+  }
+
+  function setNextEnabled(enabled=true){
+    nextBtn.disabled = !enabled;
+    nextBtn.classList.toggle('bg-blue-600', enabled);
+    nextBtn.classList.toggle('text-white', enabled);
+    nextBtn.classList.toggle('bg-slate-300', !enabled);
+    nextBtn.classList.toggle('text-slate-500', !enabled);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+
+  function levelBadge(q){
+    const map = {C1:'bg-sky-100 text-blue-700', C2:'bg-yellow-100 text-amber-800', C3:'bg-red-100 text-red-700'};
+    return `<span class="comic-chip ${map[q.level] || 'bg-slate-100'} px-3 py-1 text-xs font-black">LEVEL ${q.level}</span>`;
+  }
+
+  function questionHeader(q){
+    return `
+      <div class="flex items-start justify-between gap-2">
+        <div>${levelBadge(q)}</div>
+        <div class="comic-chip bg-white px-3 py-1 text-xs font-black">Q${q.id}</div>
+      </div>
+      <h2 class="mt-4 text-xl sm:text-2xl font-black leading-tight">${q.prompt}</h2>
+    `;
+  }
+
+  // ====== QUESTION RENDERERS ======
+  function renderQuestion(){
+    const q = questions[state.index];
+    progressText.textContent = `SOAL ${q.id} / ${questions.length}`;
+    feedbackArea.innerHTML = '';
+    setNextEnabled(false);
+    state.answered = false;
+    state.dragPlaced = {};
+    state.connectPairs = [];
+    state.order = [];
+
+    if(q.type === 'mc') renderMC(q);
+    if(q.type === 'tf') renderTF(q);
+    if(q.type === 'symbol') renderSymbol(q);
+    if(q.type === 'drag') renderDrag(q);
+    if(q.type === 'order') renderOrder(q);
+    if(q.type === 'connect') renderConnect(q);
+
+    setupTimer();
+  }
+
+  function renderMC(q){
+    // Acak posisi pilihan A/B/C/D tanpa mengubah jawaban yang benar.
+    // Struktur ini menjaga nilai jawaban asli q.answer (index pada data sumber),
+    // lalu menyimpan posisi jawaban benar setelah diacak ke state.mcAnswer.
+    const shuffled = q.options.map((text, originalIndex) => ({
+      text,
+      originalIndex
+    })).sort(() => Math.random() - 0.5);
+
+    state.mcAnswer = shuffled.findIndex(item => item.originalIndex === q.answer);
+
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4 grid gap-3" id="mcOptions">
+        ${shuffled.map((op,i)=>`
+          <button type="button" class="choice p-4 text-left font-black text-base" data-index="${i}">
+            <span class="inline-flex w-8 h-8 items-center justify-center rounded-full bg-sky-100 border-2 border-slate-800 mr-2">${String.fromCharCode(65+i)}</span>
+            ${escapeHtml(op.text)}
+          </button>
+        `).join('')}
+      </div>
+    `;
+    questionCard.querySelectorAll('.choice').forEach(btn => btn.addEventListener('click', () => {
+      sfxClick();
+      submitAnswer(Number(btn.dataset.index), false);
+    }));
+  }
+
+  function renderTF(q){
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <button type="button" class="choice p-5 font-black text-lg" data-value="true">✅ BENAR</button>
+        <button type="button" class="choice p-5 font-black text-lg" data-value="false">❌ SALAH</button>
+      </div>
+    `;
+    questionCard.querySelectorAll('.choice').forEach(btn => btn.addEventListener('click', ()=>{
+      sfxClick();
+      submitAnswer(btn.dataset.value === 'true', false);
+    }));
+  }
+
+  function renderSymbol(q){
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        ${q.options.map(op=>`
+          <button type="button" class="icon-box p-4 text-center" data-value="${escapeHtml(op.value)}">
+            <div class="text-4xl">${op.icon}</div>
+            <div class="font-black mt-2">${escapeHtml(op.label)}</div>
+          </button>
+        `).join('')}
+      </div>
+    `;
+    questionCard.querySelectorAll('.icon-box').forEach(btn => btn.addEventListener('click', ()=>{
+      sfxClick();
+      submitAnswer(btn.dataset.value, false);
+    }));
+  }
+
+  function renderDrag(q){
+    const items = q.dragItems.map(item => `
+      <div class="drag-item p-3 font-black" draggable="true" data-id="${item.id}" data-correct="${item.correct}">
+        <div class="text-sm">${escapeHtml(item.text)}</div>
+      </div>
+    `).join('');
+    const zones = q.groups.map(g=>`
+      <div class="drop-target p-3" data-group="${g.id}">
+        <div class="font-black text-blue-700 text-sm">${escapeHtml(g.label)}</div>
+        <div class="mt-2 space-y-2 drop-content"></div>
+      </div>
+    `).join('');
+
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4">
+        <div class="text-sm font-black text-slate-500 mb-2">KARTU</div>
+         <div class="small-note mb-2">Kartu yang sudah ditempatkan akan berpindah ke dalam kelompok dan tetap bisa dipindahkan sebelum pengecekan.</div>
+        <div id="dragPool" class="grid grid-cols-2 gap-2">${items}</div>
+        <div class="text-sm font-black text-slate-500 mt-5 mb-2">KELOMPOKKAN KE SINI</div>
+        <div id="dropZones" class="grid gap-3">${zones}</div>
+        <button id="checkDrag" type="button" class="comic-btn w-full mt-4 bg-blue-600 text-white px-4 py-3 font-black">CEK PENGELOMPOKAN</button>
+      </div>
+    `;
+
+    questionCard.querySelectorAll('.drag-item').forEach(item => {
+      item.addEventListener('dragstart', e => {
+        item.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+      });
+      item.addEventListener('dragend', () => item.classList.remove('dragging'));
+      item.addEventListener('click', () => {
+        // Mobile-friendly: ketuk kartu untuk memindahkannya ke kelompok berikutnya.
+        if(state.answered) return;
+        const zones = [...questionCard.querySelectorAll('.drop-target')];
+        const currentZone = item.closest('.drop-target');
+        const currentIndex = currentZone ? zones.indexOf(currentZone) : -1;
+        const nextZone = zones.find((z, idx) => idx > currentIndex);
+        const fallbackZone = zones.find(z => z !== currentZone);
+        const target = nextZone || fallbackZone;
+        if(target) placeDrag(item.dataset.id, target.dataset.group);
+      });
+    });
+
+    questionCard.querySelectorAll('.drop-target').forEach(zone=>{
+      zone.addEventListener('dragover',e=>{e.preventDefault(); zone.classList.add('over');});
+      zone.addEventListener('dragleave',()=>zone.classList.remove('over'));
+      zone.addEventListener('drop',e=>{
+        e.preventDefault(); zone.classList.remove('over');
+        const id=e.dataTransfer.getData('text/plain');
+        placeDrag(id, zone.dataset.group);
+      });
+    });
+    el('checkDrag').addEventListener('click', ()=>{
+      sfxClick();
+      const all = q.dragItems.every(it => state.dragPlaced[it.id]);
+      const correct = all && q.dragItems.every(it => state.dragPlaced[it.id] === it.correct);
+      submitAnswer(correct, false);
+    });
+  }
+
+  function placeDrag(id, group){
+    const item = questionCard.querySelector(`.drag-item[data-id="${id}"]`);
+    const zone = questionCard.querySelector(`.drop-target[data-group="${group}"] .drop-content`);
+    if(!item || !zone || state.answered) return;
+
+    // Pindahkan kartu ASLI ke dalam kelompok, bukan membuat salinan.
+    // Dengan cara ini opsi yang sudah ditempatkan tidak lagi tertinggal
+    // di area "KARTU" dan tetap bisa dipindahkan ke kelompok lain.
+    if(item.parentElement !== zone){
+      zone.appendChild(item);
+    }
+
+    state.dragPlaced[id] = group;
+  }
+
+  function renderOrder(q){
+    state.order = [...q.items].sort(()=>Math.random()-.5);
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4">
+        <div class="text-sm font-black text-slate-500">SUSUN DARI TERTINGGI → TERENDAH</div>
+        <div id="orderList" class="mt-3 space-y-2">
+          ${state.order.map((item,i)=>`
+            <div class="order-item p-3 flex items-center gap-3" draggable="true" data-item="${escapeHtml(item)}">
+              <span class="order-num comic-chip bg-yellow-200 px-2 py-1 text-xs font-black">${i+1}</span>
+              <span class="font-black flex-1">${escapeHtml(item)}</span>
+              <span class="text-xl">↕️</span>
+            </div>
+          `).join('')}
+        </div>
+        <p class="small-note mt-3">Tip mobile: tekan tahan kartu lalu geser.</p>
+        <button id="checkOrder" type="button" class="comic-btn w-full mt-4 bg-blue-600 text-white px-4 py-3 font-black">CEK URUTAN</button>
+      </div>
+    `;
+    let dragSrc = null;
+    questionCard.querySelectorAll('.order-item').forEach(item=>{
+      item.addEventListener('dragstart',()=>{dragSrc=item; item.classList.add('dragging');});
+      item.addEventListener('dragend',()=>{dragSrc=null; item.classList.remove('dragging'); updateOrderState();});
+      item.addEventListener('dragover',e=>{
+        e.preventDefault();
+        if(!dragSrc || dragSrc===item) return;
+        const list=item.parentElement;
+        const rect=item.getBoundingClientRect();
+        const before=e.clientY < rect.top + rect.height/2;
+        list.insertBefore(dragSrc, before ? item : item.nextSibling);
+      });
+      // tap interaction: move one step down
+      item.addEventListener('click',()=>{
+        if(state.answered) return;
+        const list=item.parentElement;
+        const next=item.nextElementSibling;
+        if(next) list.insertBefore(next,item);
+        updateOrderState();
+      });
+    });
+    el('checkOrder').addEventListener('click',()=>{
+      updateOrderState();
+      const correct = JSON.stringify(state.order) === JSON.stringify(q.answer);
+      sfxClick();
+      submitAnswer(correct, false);
+    });
+    updateOrderState();
+  }
+
+  function updateOrderState(){
+    const items=[...questionCard.querySelectorAll('.order-item')].map(x=>x.dataset.item);
+    state.order=items;
+    questionCard.querySelectorAll('.order-num').forEach((n,i)=>n.textContent=i+1);
+  }
+
+  function renderConnect(q){
+    questionCard.innerHTML = questionHeader(q) + `
+      <div class="mt-4">
+        <div class="connect-board" id="connectBoard">
+          <svg id="connectSvg" class="connect-lines" aria-hidden="true"></svg>
+
+          <div class="connect-grid" id="connectGrid">
+            <div class="connect-col" id="connectLeft"></div>
+
+            <div class="connect-col" id="connectRight"></div>
+          </div>
+
+          <div class="connect-center">↔</div>
+        </div>
+
+        <p class="small-note mt-3">
+          Cara bermain: pilih 1 item di kiri, lalu pilih pasangan yang benar di kanan.
+          Garis hijau akan menunjukkan pasangan yang sudah dihubungkan.
+        </p>
+
+        <button id="checkConnect" type="button"
+          class="comic-btn w-full mt-4 bg-blue-600 text-white px-4 py-3 font-black">
+          CEK PASANGAN
+        </button>
+      </div>
+    `;
+
+    const board = el('connectBoard');
+    const leftCol = el('connectLeft');
+    const rightCol = el('connectRight');
+    const svg = el('connectSvg');
+
+    const shuffledRight = q.pairs.map((p, i) => ({...p, idx:i}))
+      .sort(() => Math.random() - 0.5);
+
+    leftCol.innerHTML = q.pairs.map((p, i) => `
+      <button type="button"
+        class="connect-card"
+        data-side="left"
+        data-id="${i}">
+        <span>${escapeHtml(p.left)}</span>
+      </button>
+    `).join('');
+
+    rightCol.innerHTML = shuffledRight.map((p) => `
+      <button type="button"
+        class="connect-card"
+        data-side="right"
+        data-id="${p.idx}">
+        <span>${escapeHtml(p.right)}</span>
+      </button>
+    `).join('');
+
+    const matches = [];
+    let selectedLeft = null;
+
+    function centerPoint(node){
+      const boardRect = board.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      return {
+        x: rect.left - boardRect.left + rect.width / 2,
+        y: rect.top - boardRect.top + rect.height / 2
+      };
+    }
+
+    function drawLines(){
+      const boardRect = board.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${boardRect.width} ${boardRect.height}`);
+      svg.innerHTML = '';
+
+      matches.forEach(match => {
+        const leftNode = questionCard.querySelector(
+          `[data-side="left"][data-id="${match.left}"]`
+        );
+        const rightNode = questionCard.querySelector(
+          `[data-side="right"][data-id="${match.right}"]`
+        );
+
+        if(!leftNode || !rightNode) return;
+
+        const a = centerPoint(leftNode);
+        const b = centerPoint(rightNode);
+        const midX = (a.x + b.x) / 2;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute(
+          'd',
+          `M ${a.x} ${a.y}
+           C ${midX-24} ${a.y}, ${midX+24} ${b.y}, ${b.x} ${b.y}`
+        );
+        path.setAttribute('class','connect-line');
+        svg.appendChild(path);
+
+        [a,b].forEach(pt => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          circle.setAttribute('cx', pt.x);
+          circle.setAttribute('cy', pt.y);
+          circle.setAttribute('r', 6);
+          circle.setAttribute('class','connect-dot-end');
+          svg.appendChild(circle);
+        });
+      });
+
+      if(selectedLeft !== null){
+        const leftNode = questionCard.querySelector(
+          `[data-side="left"][data-id="${selectedLeft}"]`
+        );
+        if(leftNode){
+          const a = centerPoint(leftNode);
+          const pending = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          pending.setAttribute('cx', a.x);
+          pending.setAttribute('cy', a.y);
+          pending.setAttribute('r', 8);
+          pending.setAttribute('fill', '#ffd83d');
+          pending.setAttribute('stroke', '#15324b');
+          pending.setAttribute('stroke-width', '3');
+          svg.appendChild(pending);
+        }
+      }
+    }
+
+    function applyMatchedStyles(){
+      // Pasangan yang sudah dibuat tetap terlihat hijau, tetapi TIDAK dikunci.
+      // Peserta masih boleh mengklik ulang pasangan tersebut untuk menggantinya
+      // sebelum tombol "CEK PASANGAN" ditekan.
+      questionCard.querySelectorAll('.connect-card').forEach(btn => {
+        btn.classList.remove('matched');
+        btn.classList.remove('disabled');
+      });
+
+      matches.forEach(match => {
+        const l = questionCard.querySelector(`[data-side="left"][data-id="${match.left}"]`);
+        const r = questionCard.querySelector(`[data-side="right"][data-id="${match.right}"]`);
+        if(l) l.classList.add('matched');
+        if(r) r.classList.add('matched');
+      });
+    }
+
+    questionCard.querySelectorAll('.connect-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(state.answered) return;
+
+        sfxClick();
+
+        const side = btn.dataset.side;
+        const id = Number(btn.dataset.id);
+
+        if(side === 'left'){
+          // Selalu izinkan memilih ulang sisi kiri, termasuk yang sudah terhubung.
+          selectedLeft = id;
+
+          questionCard.querySelectorAll('[data-side="left"]').forEach(b => {
+            b.classList.remove('left-selected');
+          });
+
+          btn.classList.add('left-selected');
+          drawLines();
+          return;
+        }
+
+        // Belum memilih sisi kiri -> abaikan klik sisi kanan.
+        if(selectedLeft === null) return;
+
+        // Hapus pasangan lama yang memakai sisi kiri terpilih ATAU sisi kanan yang baru dipilih.
+        // Dengan begitu peserta bebas mengganti jawaban sebelum pengecekan.
+        for(let i = matches.length - 1; i >= 0; i--){
+          if(matches[i].left === selectedLeft || matches[i].right === id){
+            matches.splice(i, 1);
+          }
+        }
+
+        matches.push({
+          left: selectedLeft,
+          right: id
+        });
+
+        selectedLeft = null;
+
+        questionCard.querySelectorAll('[data-side="left"]').forEach(b => {
+          b.classList.remove('left-selected');
+        });
+
+        applyMatchedStyles();
+        drawLines();
+      });
+    });
+
+    el('checkConnect').addEventListener('click', () => {
+      if(state.answered) return;
+
+      const correct =
+        matches.length === q.pairs.length &&
+        matches.every(m => m.left === m.right);
+
+      sfxClick();
+      submitAnswer(correct, false);
+    });
+
+    window.addEventListener('resize', drawLines, { once:true });
+    requestAnimationFrame(drawLines);
+  }
+
+  // ====== ANSWER + FEEDBACK ======
+  function submitAnswer(value, timeout){
+    if(state.answered) return;
+    state.answered=true;
+    clearInterval(state.timerId);
+
+    const q=questions[state.index];
+    let correct=false;
+
+    if(timeout){
+      correct=false;
+    }else if(q.type==='mc'){
+      correct = value === state.mcAnswer;
+    }else if(q.type==='tf' || q.type==='symbol'){
+      correct = value === q.answer;
+    }else{
+      correct = Boolean(value);
+    }
+
+    // Style selection where possible
+    if(q.type==='mc' && value!==null){
+      questionCard.querySelectorAll('.choice').forEach(btn=>{
+        btn.disabled=true;
+        const idx=Number(btn.dataset.index);
+        if(idx===state.mcAnswer) btn.classList.add('correct');
+        if(idx===value && !correct) btn.classList.add('wrong');
+      });
+    }
+    if(q.type==='tf' && value!==null){
+      questionCard.querySelectorAll('.choice').forEach(btn=>{
+        btn.disabled=true;
+        const val=btn.dataset.value==='true';
+        if(val===q.answer) btn.classList.add('correct');
+        if(val===value && !correct) btn.classList.add('wrong');
+      });
+    }
+    if(q.type==='symbol'){
+      questionCard.querySelectorAll('.icon-box').forEach(btn=>{
+        btn.disabled=true;
+        if(btn.dataset.value===q.answer) btn.classList.add('selected');
+        if(btn.dataset.value===value && !correct) btn.classList.add('wrong');
+      });
+    }
+    questionCard.querySelectorAll('button').forEach(b=>b.disabled=true);
+
+    if(correct){
+      state.score++;
+      sfxCorrect();
+    }else{
+      state.lives--;
+      sfxWrong();
+      if(state.lives<0) state.lives=0;
+    }
+    renderHearts();
+    showFeedback(correct, timeout, q);
+    setNextEnabled(true);
+
+    if(state.lives<=0){
+      nextBtn.textContent='LIHAT HASIL • GAME OVER 💥';
+    }else if(state.index===questions.length-1){
+      nextBtn.textContent='LIHAT HASIL 🏆';
+    }else{
+      nextBtn.textContent='SOAL SELANJUTNYA ➜';
+    }
+  }
+
+  function showFeedback(correct, timeout, q){
+    feedbackArea.innerHTML = `
+      <div class="feedback mt-4 p-4 ${correct ? 'bg-emerald-50 border-emerald-700' : 'bg-red-50 border-red-700'}">
+        <div class="flex items-center gap-2 font-black text-lg">
+          <span class="text-2xl">${correct ? '🎉' : timeout ? '⏰' : '💥'}</span>
+          <span>${correct ? 'JAWABAN BENAR!' : timeout ? 'WAKTU HABIS!' : 'JAWABAN SALAH'}</span>
+        </div>
+        <div class="mt-3 font-black text-blue-700">PEMBAHASAN</div>
+        <p class="mt-1 text-sm leading-relaxed">${q.explanation}</p>
+        ${!correct ? `<div class="mt-3 comic-chip bg-yellow-100 px-3 py-2 text-xs font-black">❤️ NYAWA TERSISA: ${state.lives}</div>` : ''}
+      </div>
+    `;
+  }
+
+  // ====== RESULT ======
+  function showResult(){
+    clearInterval(state.timerId);
+    const passed = (state.score / questions.length) * 100 >= 70;
+    el('scoreText').textContent = `${state.score} / ${questions.length}`;
+    el('percentText').textContent = `${Math.round((state.score/questions.length)*100)}%`;
+    el('resultName').textContent = state.name;
+    el('resultEmoji').textContent = passed ? '🏆' : '🥲';
+    el('resultTitle').textContent = passed ? 'MISSION BERHASIL!' : 'BELUM LULUS';
+    el('resultSubtitle').textContent = passed
+      ? 'Mantap! Kita sudah melewati misi Red Meat dengan gemilang.'
+      : 'Semangat! Pelajari lagi materinya, lalu coba ulangi misi.';
+    el('resultBadge').textContent = passed ? 'MISSION COMPLETE' : 'RETRY MISSION';
+    el('resultBadge').className = `inline-flex comic-chip ${passed ? 'bg-yellow-300' : 'bg-slate-200'} px-4 py-2 text-xs font-black uppercase mt-3`;
+
+    showScreen(resultScreen);
+    if(passed) confettiBurst();
+    else sfxGameOver();
+  }
+
+  function confettiBurst(){
+    const shapes=['🟨','🟥','🟦','🟩','⭐','✨','🎉'];
+    for(let i=0;i<44;i++){
+      const p=document.createElement('div');
+      p.className='confetti-piece';
+      p.textContent=shapes[Math.floor(Math.random()*shapes.length)];
+      p.style.left=(Math.random()*100)+'vw';
+      p.style.fontSize=(10+Math.random()*14)+'px';
+      p.style.animationDuration=(1.8+Math.random()*1.4)+'s';
+      p.style.animationDelay=(Math.random()*.45)+'s';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), 4200);
+    }
+  }
+
+  // ====== NAV ======
+  startBtn.addEventListener('click',()=>{
+    ensureAudio();
+    state.name=playerName.value.trim();
+    state.index=0;
+    state.score=0;
+    state.lives=5;
+    renderHearts();
+    showScreen(quizScreen);
+    renderQuestion();
+    sfxClick();
+  });
+
+  nextBtn.addEventListener('click',()=>{
+    sfxClick();
+    if(state.lives<=0 || state.index===questions.length-1){
+      showResult();
+      return;
+    }
+    state.index++;
+    renderQuestion();
+  });
+
+  giveUpBtn.addEventListener('click',()=>{
+    sfxClick();
+    confirmModal.classList.remove('hidden-force');
+  });
+  cancelGiveUp.addEventListener('click',()=>confirmModal.classList.add('hidden-force'));
+  confirmGiveUp.addEventListener('click',()=>{
+    confirmModal.classList.add('hidden-force');
+    clearInterval(state.timerId);
+    playerName.value='';
+    updateStartButton();
+    state.name='';
+    state.index=0;
+    state.score=0;
+    state.lives=5;
+    showScreen(startScreen);
+  });
+  el('restartBtn').addEventListener('click',()=>{
+    sfxClick();
+    playerName.value='';
+    updateStartButton();
+    state.name='';
+    state.index=0;
+    state.score=0;
+    state.lives=5;
+    showScreen(startScreen);
+  });
+
+  // Prevent accidental page scroll while dragging on touch-like devices
+  document.addEventListener('gesturestart', e => e.preventDefault());
+
+  updateStartButton();
+  renderHearts();
+})();
+</script>
+</body>
+</html>
